@@ -1,0 +1,10 @@
+[package]
+name = "zarchify/zarch"
+description = "A strictly typed heirarchical state machine library for roblox."
+version = "0.1.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+license = "MIT"
+
+[dev-dependencies]
+testez = "roblox/testez@0.4.1"
