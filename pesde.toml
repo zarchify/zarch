@@ -1,4 +1,4 @@
-name = "zarch/zarch"
+name = "zarchify/zarch"
 version = "0.1.0"
 description = "A strictly typed heirarchical state machine library for roblox."
 authors = ["zarch"]
