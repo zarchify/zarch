@@ -1,5 +1,5 @@
 name = "zarchify/zarch"
-version = "0.1.0"
+version = "0.1.1"
 description = "A strictly typed heirarchical state machine library for roblox."
 authors = ["zarch"]
 repository = "https://github.com/zarchify/zarch"

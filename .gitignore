@@ -4,6 +4,7 @@
 /*.rbxl.lock
 ./tests
 /tests
+/DevPackages
 sourcemap.json
 Packages/
 roblox_packages/
