@@ -5,7 +5,8 @@ export type ActionFn<Ctx, EventData> = (context: Ctx, event_data: EventData?) ->
 
 export type Transition<Ctx, EventData> = string | {
     target: string?,
-    actions: { string | ActionFn<Ctx, EventData> }?
+    actions: { string | ActionFn<Ctx, EventData> }?,
+    guards: { string | ((context: Ctx, event_data: EventData?) -> boolean) }?
 }
 
 export type StateNodeConfig<Ctx, EventData> = {
@@ -26,7 +27,8 @@ export type MachineConfig<Ctx, EventData> = {
 }
 
 export type MachineOptions<Ctx, EventData> = {
-    actions: { [string]: ActionFn<Ctx, EventData> }?
+    actions: { [string]: ActionFn<Ctx, EventData> }?,
+    guards: { [string]: ((context: Ctx, event_data: EventData?) -> boolean) }?
 }
 
 export type RuntimeStateNode<Ctx, EventData> = {

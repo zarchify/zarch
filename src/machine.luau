@@ -226,12 +226,30 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
     
     local target_id: string?
     local actions_to_run
+    local guards
     
     if type(transition) == "string" then
         target_id = transition
     elseif type(transition) == "table" then
         target_id = transition.target
         actions_to_run = transition.actions
+        guards = transition.guards
+    end
+    
+    if guards then
+        for _, guard in guards do
+            if type(guard) == "function" then
+                if not guard(self.context, event_data) then
+                    return
+                end
+            elseif type(guard) == "string" and self.options and self.options.guards then
+                local guard_fn = self.options.guards[guard]
+                if guard_fn then 
+                    local result = guard_fn(self.context, event_data)
+                    if not result then return end
+                end
+            end
+        end
     end
     
     if actions_to_run then
@@ -252,10 +270,24 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
         if target_node then
             local lca = get_lca(source_node, target_node)
             exit_nodes_below(self, lca)
-            
+
+            local path_stop: Types.RuntimeStateNode<Ctx, EventData>? = lca
+            if lca == target_node and lca ~= nil then
+                if lca.on_exit then
+                    lca.on_exit(self.context)
+                end
+                local lca_cleanup = self._cleanups[lca._id]
+                if lca_cleanup then
+                    lca_cleanup()
+                    self._cleanups[lca._id] = nil
+                end
+                self.active_nodes[lca._id] = nil
+                path_stop = lca._parent
+            end
+
             local path_to_target: { Types.RuntimeStateNode<Ctx, EventData> } = {}
             local curr: Types.RuntimeStateNode<Ctx, EventData>? = target_node
-            while curr and curr ~= lca do
+            while curr and curr ~= path_stop do
                 table.insert(path_to_target, 1, curr)
                 curr = curr._parent
             end
