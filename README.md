@@ -22,7 +22,7 @@ Zarch is a minimal implementation for managing complex state-driven architecture
 Add the following to your `wally.toml`:
 ```toml
 [dependencies]
-zarch = "zarchify/zarch@0.1.1"
+zarch = "zarchify/zarch@0.1.4"
 ```
 
 ### [Pesde](https://pesde.dev/)

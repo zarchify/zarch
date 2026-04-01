@@ -5,3 +5,4 @@
 
 [tools]
 wally = "UpliftGames/wally@0.3.2"
+just = "casey/just@1.47.1"

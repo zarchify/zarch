@@ -33,30 +33,36 @@ export type MachineOptions<Ctx, EventData> = {
     guards: { [string]: ((context: Ctx, event_data: EventData?) -> boolean) }?
 }
 
-export type RuntimeStateNode<Ctx, EventData> = {
+export type RuntimeStateNodeBase = {
+    on_entry: ((...any) -> CleanupFn?)?,
+    on_exit: ((...any) -> ())?,
+    events: { [string]: any }?,
+
+    initial: string?,
+    parallel: boolean?,
+    states: { [string]: RuntimeStateNodeBase }?,
+
+    _id: string,
+    _parent: RuntimeStateNodeBase?,
+}
+
+export type RuntimeStateNode<Ctx, EventData> = RuntimeStateNodeBase & {
     on_entry: ActionFn<Ctx, EventData>?,
     on_exit: ((context: Ctx) -> ())?,
     events: { [string]: Transition<Ctx, EventData> }?,
-    
-    initial: string?,
-    parallel: boolean?,
-    states: { [string]: RuntimeStateNode<Ctx, EventData> }?,
-    
-    _id: string,
-    _parent: RuntimeStateNode<Ctx, EventData>?,
 }
 
 export type StateMachine<Ctx, EventData> = {
     config: MachineConfig<Ctx, EventData>,
     options: MachineOptions<Ctx, EventData>?,
     context: Ctx,
-    
-    root: RuntimeStateNode<Ctx, EventData>,
-    id_map: { [string]: RuntimeStateNode<Ctx, EventData> },
+
+    root: RuntimeStateNodeBase,
+    id_map: { [string]: RuntimeStateNodeBase },
     active_nodes: { [string]: boolean },
     _started: boolean,
     _cleanups: { [string]: CleanupFn },
-    
+
     start: (self: StateMachine<Ctx, EventData>) -> (),
     send: (self: StateMachine<Ctx, EventData>, event: string, event_data: EventData?) -> (),
     get_active_state: (self: StateMachine<Ctx, EventData>, node_id: string) -> boolean,

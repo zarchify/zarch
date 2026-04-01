@@ -8,7 +8,7 @@ StateMachine.__index = StateMachine
     recursive method which goes into a branch and flags each state it passes as active,
     firing on_entry and branching into parallel or initial children it finds
 ]]--
-local function enter_node<Ctx, EventData>(machine: Types.StateMachine<Ctx, EventData>, node: Types.RuntimeStateNode<Ctx, EventData>, event_data: EventData?, skip_self: boolean?)
+local function enter_node(machine: Types.StateMachine<any, any>, node: Types.RuntimeStateNodeBase, event_data: any, skip_self: boolean?)
     if not skip_self then
         machine.active_nodes[node._id] = true
         if node.on_entry then
@@ -32,12 +32,12 @@ local function enter_node<Ctx, EventData>(machine: Types.StateMachine<Ctx, Event
 end
 
 -- exits all nodes below the ancestor
-local function exit_nodes_below<Ctx, EventData>(machine: Types.StateMachine<Ctx, EventData>, ancestor: Types.RuntimeStateNode<Ctx, EventData>?)
-    local descendants: { { node: Types.RuntimeStateNode<Ctx, EventData>, depth: number } } = {}
+local function exit_nodes_below(machine: Types.StateMachine<any, any>, ancestor: Types.RuntimeStateNodeBase?)
+    local descendants: { { node: Types.RuntimeStateNodeBase, depth: number } } = {}
     for id, _ in machine.active_nodes do
         local node = machine.id_map[id]
         if node then
-            local curr: Types.RuntimeStateNode<Ctx, EventData>? = node
+            local curr: Types.RuntimeStateNodeBase? = node
             local is_descendant = false
             local depth = 0
             while curr do
@@ -78,10 +78,10 @@ end
     climbs to find the lowest common ancestor (closest shared parent) between the old and new states
     so that send knows when to stop calling on_exits and start calling on_entries
 ]]--
-local function get_lca<Ctx, EventData>(nodeA: Types.RuntimeStateNode<Ctx, EventData>?, nodeB: Types.RuntimeStateNode<Ctx, EventData>?): Types.RuntimeStateNode<Ctx, EventData>?
+local function get_lca(nodeA: Types.RuntimeStateNodeBase?, nodeB: Types.RuntimeStateNodeBase?): Types.RuntimeStateNodeBase?
     if not nodeA or not nodeB then return nil end
     local pathA = {}
-    local curr: Types.RuntimeStateNode<Ctx, EventData>? = nodeA
+    local curr: Types.RuntimeStateNodeBase? = nodeA
     while curr do
         pathA[curr] = true
         curr = curr._parent
@@ -98,7 +98,7 @@ end
 --[[
     scans active states and filters out the parents returning only the deepest leaf nodes
 ]]--
-local function get_active_leaf_nodes<Ctx, EventData>(machine: Types.StateMachine<Ctx, EventData>): { Types.RuntimeStateNode<Ctx, EventData> }
+local function get_active_leaf_nodes(machine: Types.StateMachine<any, any>): { Types.RuntimeStateNodeBase }
     local leaves = {}
     for id, _ in machine.active_nodes do
         local node = machine.id_map[id]
@@ -139,16 +139,16 @@ function StateMachine.create_machine<Ctx, EventData>(config: Types.MachineConfig
         _started = false,
     }, StateMachine)
     
-    local function parse_node(id: string, node_config: Types.StateNodeConfig<Ctx, EventData>, parent: Types.RuntimeStateNode<Ctx, EventData>?): Types.RuntimeStateNode<Ctx, EventData>
-        local runtime_node: any = {
+    local function parse_node(id: string, node_config: Types.StateNodeConfig<Ctx, EventData>, parent: Types.RuntimeStateNodeBase?): Types.RuntimeStateNodeBase
+        local runtime_node: Types.RuntimeStateNodeBase = {
             _id = id,
             _parent = parent,
-            on_entry = node_config.on_entry,
-            on_exit = node_config.on_exit,
-            events = node_config.events,
+            on_entry = node_config.on_entry :: any,
+            on_exit = node_config.on_exit :: any,
+            events = node_config.events :: any,
             initial = node_config.initial,
             parallel = node_config.parallel,
-            states = nil
+            states = nil,
         }
         
         self.id_map[id] = runtime_node
@@ -156,7 +156,7 @@ function StateMachine.create_machine<Ctx, EventData>(config: Types.MachineConfig
         if node_config.states then
             runtime_node.states = {}
             for child_id, child_config in node_config.states do
-                runtime_node.states[child_id] = parse_node(child_id, child_config, runtime_node)
+                (runtime_node.states :: { [string]: Types.RuntimeStateNodeBase })[child_id] = parse_node(child_id, child_config, runtime_node)
             end
         end
         
@@ -193,7 +193,7 @@ end
 function StateMachine.start<Ctx, EventData>(self: Types.StateMachine<Ctx, EventData>): ()
     if self._started then return end
     self._started = true
-    enter_node(self, self.root, nil)
+    enter_node(self :: any, self.root, nil)
 end
 
 --[[
@@ -205,12 +205,12 @@ end
 function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventData>, event: string, event_data: EventData?): ()
     if not self._started then return end
     
-    local leaves = get_active_leaf_nodes(self)
-    local source_node: Types.RuntimeStateNode<Ctx, EventData>? = nil
-    local transition: Types.Transition<Ctx, EventData>? = nil
+    local leaves = get_active_leaf_nodes(self :: any)
+    local source_node: Types.RuntimeStateNodeBase? = nil
+    local transition: any = nil
     
     for _, leaf in leaves do
-        local curr: Types.RuntimeStateNode<Ctx, EventData>? = leaf
+        local curr: Types.RuntimeStateNodeBase? = leaf
         while curr do
             if curr.events and curr.events[event] then
                 source_node = curr
@@ -241,7 +241,6 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
         end
         return true
     end
-
 
     if type(transition) == "table" and (transition)[1] ~= nil then
         local chosen = nil
@@ -287,9 +286,9 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
         local target_node = self.id_map[target_id]
         if target_node then
             local lca = get_lca(source_node, target_node)
-            exit_nodes_below(self, lca)
+            exit_nodes_below(self :: any, lca)
 
-            local path_stop: Types.RuntimeStateNode<Ctx, EventData>? = lca
+            local path_stop: Types.RuntimeStateNodeBase? = lca
             if lca == target_node and lca ~= nil then
                 if lca.on_exit then
                     lca.on_exit(self.context)
@@ -303,8 +302,8 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
                 path_stop = lca._parent
             end
 
-            local path_to_target: { Types.RuntimeStateNode<Ctx, EventData> } = {}
-            local curr: Types.RuntimeStateNode<Ctx, EventData>? = target_node
+            local path_to_target: { Types.RuntimeStateNodeBase } = {}
+            local curr: Types.RuntimeStateNodeBase? = target_node
             while curr and curr ~= path_stop do
                 table.insert(path_to_target, 1, curr)
                 curr = curr._parent
@@ -320,7 +319,7 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
                 end
             end
             
-            enter_node(self, target_node, event_data, true)
+            enter_node(self :: any, target_node, event_data, true)
         end
     end
 end
