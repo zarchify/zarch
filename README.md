@@ -15,6 +15,10 @@ Zarch is a minimal implementation for managing complex state-driven architecture
 - **Parallel State Management:** Zarch allows for the management of multiple states simultaneously, enabling the creation of complex game mechanics that require concurrent state handling.
 - **Lightweight & Zero-Dependency:** minimal API with no bloat. 
 
+## Disclosures
+
+Zarch is still quite young and lacks some of the features that arch provides. Notably, it lacks the logging and debugging functionalities. If these features are meaningful to you, I reccomend that you consider using [Arch](https://github.com/bohraz/Arch) instead.
+
 ## Installation
 
 
