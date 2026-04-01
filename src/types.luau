@@ -3,11 +3,13 @@
 export type CleanupFn = () -> ()
 export type ActionFn<Ctx, EventData> = (context: Ctx, event_data: EventData?) -> CleanupFn?
 
-export type Transition<Ctx, EventData> = string | {
+export type TransitionConfig<Ctx, EventData> = {
     target: string?,
     actions: { string | ActionFn<Ctx, EventData> }?,
     guards: { string | ((context: Ctx, event_data: EventData?) -> boolean) }?
 }
+
+export type Transition<Ctx, EventData> = string | TransitionConfig<Ctx, EventData> | { TransitionConfig<Ctx, EventData> }
 
 export type StateNodeConfig<Ctx, EventData> = {
     on_entry: ActionFn<Ctx, EventData>?,

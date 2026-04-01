@@ -224,33 +224,51 @@ function StateMachine.send<Ctx, EventData>(self: Types.StateMachine<Ctx, EventDa
     
     if not transition or not source_node then return end
     
-    local target_id: string?
-    local actions_to_run
-    local guards
-    
-    if type(transition) == "string" then
-        target_id = transition
-    elseif type(transition) == "table" then
-        target_id = transition.target
-        actions_to_run = transition.actions
-        guards = transition.guards
-    end
-    
-    if guards then
-        for _, guard in guards do
+    local function evaluate_guards(guards_list: { string | ((context: any, event_data: any) -> boolean) }?): boolean
+        if not guards_list then return true end
+        local opts = self.options
+        for _, guard in guards_list do
             if type(guard) == "function" then
                 if not guard(self.context, event_data) then
-                    return
+                    return false
                 end
-            elseif type(guard) == "string" and self.options and self.options.guards then
-                local guard_fn = self.options.guards[guard]
-                if guard_fn then 
-                    local result = guard_fn(self.context, event_data)
-                    if not result then return end
+            elseif type(guard) == "string" and opts and opts.guards then
+                local guard_fn = opts.guards[guard]
+                if guard_fn and not guard_fn(self.context, event_data) then
+                    return false
                 end
             end
         end
+        return true
     end
+
+
+    if type(transition) == "table" and (transition)[1] ~= nil then
+        local chosen = nil
+        for _, candidate in transition do
+            if evaluate_guards(candidate.guards) then
+                chosen = candidate
+                break
+            end
+        end
+        if not chosen then return end
+        transition = chosen
+    end
+
+    local target_id: string?
+    local actions_to_run
+    local guards
+
+    if type(transition) == "string" then
+        target_id = transition
+    elseif type(transition) == "table" then
+        local t = transition :: Types.TransitionConfig<Ctx, EventData>
+        target_id = t.target
+        actions_to_run = t.actions
+        guards = t.guards
+    end
+
+    if not evaluate_guards(guards) then return end
     
     if actions_to_run then
         for _, action in actions_to_run do
